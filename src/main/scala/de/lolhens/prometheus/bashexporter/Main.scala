@@ -88,6 +88,9 @@ object Main extends TaskApp {
     }
 
     lazy val service: HttpRoutes[Task] = AutoSlash(HttpRoutes.of[Task] {
+      case GET -> Root / "health" =>
+        Ok()
+
       case GET -> Root / "metrics" =>
         for {
           (exitCode, output) <- runScript(options.script)
