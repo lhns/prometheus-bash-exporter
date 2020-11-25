@@ -66,13 +66,13 @@ object Main extends TaskApp {
 
   private val blocker: Resource[Task, Blocker] = Blocker[Task]
 
-  def runScript(script: String): Task[(ExitCode, Seq[String])] =
+  def runScript(script: String, args: Seq[String]): Task[(ExitCode, Seq[String])] =
     for {
       result <- blocker.use { blocker =>
         val prox: ProxFS2[Task] = ProxFS2[Task](blocker)
         import prox._
         implicit val runner: ProcessRunner[JVMProcessInfo] = new JVMProcessRunner()
-        val proc = Process("bash", List("-c", script))
+        val proc = Process("bash", List("-c", script, "bash") ++ args)
         proc.toVector(fs2.text.utf8Decode).run()
       }
     } yield
@@ -91,9 +91,9 @@ object Main extends TaskApp {
       case GET -> Root / "health" =>
         Ok()
 
-      case GET -> Root / "metrics" =>
+      case GET -> path =>
         for {
-          (exitCode, output) <- runScript(options.script)
+          (exitCode, output) <- runScript(options.script, Seq(path.toString))
           outputString = output.mkString("\n")
           response <-
             if (exitCode == ExitCode.Success)
