@@ -1,6 +1,8 @@
 package de.lolhens.prometheus.bashexporter
 
+import cats.data.OptionT
 import cats.effect.{Blocker, ExitCode, Resource}
+import cats.syntax.semigroupk._
 import ch.qos.logback.classic.{Level, Logger}
 import io.github.vigoo.prox.ProxFS2
 import monix.eval.{Task, TaskApp}
@@ -28,12 +30,18 @@ object Main extends TaskApp {
   case class Options(logLevel: Level,
                      host: String,
                      port: Int,
-                     script: String) {
+                     scripts: Seq[(Seq[String], Seq[String])],
+                    ) {
     def debug: String = {
       s"""LOG_LEVEL: $logLevel
          |SERVER_HOST: $host
          |SERVER_PORT: $port
-         |SCRIPT:${script.split("\\n").map("\n  " + _).mkString}""".stripMargin
+         |${
+        scripts.map {
+          case (route, script) =>
+            (s"SCRIPT${route.map("_" + _.toUpperCase).mkString}", script.map("\n  " + _).mkString)
+        }.sortBy(_._1).map(e => s"${e._1}:${e._2}").mkString("\n")
+      }""".stripMargin
     }
   }
 
@@ -42,8 +50,10 @@ object Main extends TaskApp {
       logLevel = Level.INFO,
       host = "0.0.0.0",
       port = 8080,
-      script = ""
+      scripts = Seq.empty
     )
+
+    private val ScriptRoutePattern = "^(?i)SCRIPT(?-i)(?:_([^_]+(?:_[^_]+)*))?$".r
 
     def fromEnv: Options = {
       val env: Map[String, String] = System.getenv().asScala.toMap.map(e => (e._1, e._2.trim)).filter(_._2.nonEmpty)
@@ -51,15 +61,19 @@ object Main extends TaskApp {
       val logLevel: Level = env.get("LOG_LEVEL").map(Level.valueOf).getOrElse(default.logLevel)
       val host: String = env.getOrElse("SERVER_HOST", default.host)
       val port: Int = env.get("SERVER_PORT").map(_.toInt).getOrElse(default.port)
-      val script: String = env.get("SCRIPT").map(_.replaceAll("\\r?\\n", "\n")).getOrElse(
-        throw new IllegalArgumentException("Environment variable SCRIPT must not be empty!")
-      )
+      val scripts: Seq[(Seq[String], Seq[String])] = env.iterator.collect {
+        case (ScriptRoutePattern(routeString), scriptString) if !scriptString.isBlank =>
+          val route = Option(routeString).map(_.split("_").iterator.map(_.toLowerCase).toSeq).getOrElse(Seq.empty)
+          val script = scriptString.split("\\r?\\n").toSeq
+          (route, script)
+      }.toSeq.sortBy(_._1.size).reverse
+      require(scripts.nonEmpty, "Environment variable SCRIPT must not be empty!")
 
       Options(
         logLevel = logLevel,
         host = host,
         port = port,
-        script = script
+        scripts = scripts
       )
     }
   }
@@ -87,22 +101,33 @@ object Main extends TaskApp {
         .use(_ => Task.never)
     }
 
-    lazy val service: HttpRoutes[Task] = AutoSlash(HttpRoutes.of[Task] {
-      case GET -> Root / "health" =>
-        Ok()
 
-      case GET -> path =>
-        for {
-          (exitCode, output) <- runScript(options.script, Seq(path.toString))
-          outputString = output.mkString("\n")
-          response <-
-            if (exitCode == ExitCode.Success)
-              Ok(outputString)
-            else
-              InternalServerError(outputString)
-        } yield
-          response
-    })
+    lazy val service: HttpRoutes[Task] = AutoSlash {
+      HttpRoutes.of[Task] {
+        case GET -> Root / "health" =>
+          Ok()
+      } <+> HttpRoutes {
+        case GET -> path =>
+          val pathList = path.toList.map(_.toLowerCase)
+          for {
+            script <- OptionT.fromOption[Task] {
+              options.scripts.collectFirst {
+                case (route, script) if pathList.startsWith(route) =>
+                  script.mkString("\n")
+              }
+            }
+            (exitCode, output) <- OptionT.liftF(runScript(script, Seq(path.toString)))
+            outputString = output.mkString("\n")
+            response <- OptionT.liftF {
+              if (exitCode == ExitCode.Success)
+                Ok(outputString)
+              else
+                InternalServerError(outputString)
+            }
+          } yield
+            response
+      }
+    }
   }
 
 }
