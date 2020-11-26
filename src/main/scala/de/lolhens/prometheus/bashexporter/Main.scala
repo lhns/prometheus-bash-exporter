@@ -110,13 +110,13 @@ object Main extends TaskApp {
         case GET -> path =>
           val pathList = path.toList.map(_.toLowerCase)
           for {
-            script <- OptionT.fromOption[Task] {
+            (script, subPath) <- OptionT.fromOption[Task] {
               options.scripts.collectFirst {
                 case (route, script) if pathList.startsWith(route) =>
-                  script.mkString("\n")
+                  (script.mkString("\n"), pathList.drop(route.length))
               }
             }
-            (exitCode, output) <- OptionT.liftF(runScript(script, Seq(path.toString)))
+            (exitCode, output) <- OptionT.liftF(runScript(script, subPath))
             outputString = output.mkString("\n")
             response <- OptionT.liftF {
               if (exitCode == ExitCode.Success)
