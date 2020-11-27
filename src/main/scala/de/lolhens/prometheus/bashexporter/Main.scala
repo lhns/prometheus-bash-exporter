@@ -95,7 +95,7 @@ object Main extends TaskApp {
           val prox: ProxFS2[Task] = ProxFS2[Task](blocker)
           import prox._
           implicit val runner: ProcessRunner[JVMProcessInfo] = new JVMProcessRunner()
-          val proc = Process("C:\\Users\\U016595\\Downloads\\PortableGit-2.21.0-64-bit\\bin\\bash", List("-c", script, "bash") ++ args)
+          val proc = Process("bash", List("-c", script, "bash") ++ args)
           proc.toVector(fs2.text.utf8Decode).run()
         }
       } yield
