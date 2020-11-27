@@ -4,7 +4,7 @@
 [![Apache License 2.0](https://img.shields.io/github/license/LolHens/prometheus-bash-scraper.svg?maxAge=3600)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Prometheus metric exporter that executes a bash script on every scrape and returns the metrics from stdout.
-```$1``` in the executed script will always contain the request path.
+`$@` in the executed script will always contain the request path segments.
 
 ## Enviromnet variables
 - **LOG_LEVEL**: log level (default: INFO)
@@ -12,6 +12,7 @@ Prometheus metric exporter that executes a bash script on every scrape and retur
 - **SERVER_PORT**: listen port (default: 8080)
 - **SCRIPT_METRICS**: script that is executed on `GET /metrics`
 - **SCRIPT_TEST**: script that is executed on `GET /test`
+- **CACHE_TEST**: cache the output of `GET /test` for 10 seconds
 
 ## Docker builds
 https://github.com/users/LolHens/packages/container/package/prometheus-bash-exporter
