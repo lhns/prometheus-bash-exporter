@@ -80,7 +80,7 @@ object Main extends TaskApp {
 
   private val blocker: Resource[Task, Blocker] = Blocker[Task]
 
-  def runScript(script: String, args: Seq[String]): Task[(ExitCode, Seq[String])] =
+  def runScript(script: String, args: Seq[String]): Task[(ExitCode, String)] =
     for {
       result <- blocker.use { blocker =>
         val prox: ProxFS2[Task] = ProxFS2[Task](blocker)
@@ -90,7 +90,7 @@ object Main extends TaskApp {
         proc.toVector(fs2.text.utf8Decode).run()
       }
     } yield
-      (result.exitCode, result.output)
+      (result.exitCode, result.output.mkString)
 
   class Server(options: Options) {
     lazy val run: Task[Nothing] = Task.deferAction { scheduler =>
@@ -100,7 +100,6 @@ object Main extends TaskApp {
         .resource
         .use(_ => Task.never)
     }
-
 
     lazy val service: HttpRoutes[Task] = AutoSlash {
       HttpRoutes.of[Task] {
@@ -117,12 +116,11 @@ object Main extends TaskApp {
               }
             }
             (exitCode, output) <- OptionT.liftF(runScript(script, subPath))
-            outputString = output.mkString("\n")
             response <- OptionT.liftF {
               if (exitCode == ExitCode.Success)
-                Ok(outputString)
+                Ok(output)
               else
-                InternalServerError(outputString)
+                InternalServerError(output)
             }
           } yield
             response
