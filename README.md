@@ -7,7 +7,7 @@ Prometheus metric exporter that executes a bash script on every scrape and retur
 `$@` in the executed script will always contain the request path segments.
 
 ## Enviromnet variables
-- **LOG_LEVEL**: log level (default: INFO)
+- **LOG_LEVEL**: log level (default: ERROR)
 - **SERVER_HOST**: listen host (default: 0.0.0.0)
 - **SERVER_PORT**: listen port (default: 8080)
 - **SCRIPT_METRICS**: script that is executed on `GET /metrics`

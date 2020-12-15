@@ -25,7 +25,7 @@ RUN apt-get update \
 
 COPY --from=builder /root/prometheus-bash-exporter .
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s \
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s \
   CMD curl -Ssf -- http://localhost:${SERVER_PORT:-8080}/health || exit 1
 
 CMD exec ./prometheus-bash-exporter

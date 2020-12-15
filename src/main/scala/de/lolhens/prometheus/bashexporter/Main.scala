@@ -53,7 +53,7 @@ object Main extends TaskApp {
 
   object Options {
     val default: Options = Options(
-      logLevel = Level.INFO,
+      logLevel = Level.ERROR,
       host = "0.0.0.0",
       port = 8080,
       scripts = Seq.empty
