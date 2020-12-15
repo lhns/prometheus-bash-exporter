@@ -14,6 +14,9 @@ Prometheus metric exporter that executes a bash script on every scrape and retur
 - **SCRIPT_TEST**: script that is executed on `GET /test`
 - **CACHE_TEST**: cache the output of `GET /test` for 10 seconds
 
+## Scripts
+Head over to the [wiki](https://github.com/LolHens/prometheus-bash-exporter/wiki) to see our collection of scripts.
+
 ## Docker builds
 https://github.com/users/LolHens/packages/container/package/prometheus-bash-exporter
 
