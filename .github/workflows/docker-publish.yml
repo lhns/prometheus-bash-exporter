@@ -32,6 +32,8 @@ jobs:
           java-version: 1.11
 
       - name: Run tests
+        env:
+          CI_VERSION: ${{ github.ref }}
         run: sbt compile
 
   # Push image to GitHub Packages.
@@ -47,7 +49,9 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build image
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME
+        env:
+          CI_VERSION: ${{ github.ref }}
+        run: docker build . --build-arg CI_VERSION --file Dockerfile --tag $IMAGE_NAME
 
       - name: Log into GitHub Container Registry
         # TODO: Create a PAT with `read:packages` and `write:packages` scopes and save it as an Actions secret `CR_PAT`
