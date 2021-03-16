@@ -2,6 +2,7 @@
 [![Docker Workflow](https://github.com/LolHens/prometheus-bash-scraper/workflows/Docker/badge.svg)](https://github.com/LolHens/prometheus-bash-scraper/actions?query=workflow%3ADocker)
 [![Release Notes](https://img.shields.io/github/release/LolHens/prometheus-bash-scraper.svg?maxAge=3600)](https://github.com/LolHens/prometheus-bash-scraper/releases/latest)
 [![Apache License 2.0](https://img.shields.io/github/license/LolHens/prometheus-bash-scraper.svg?maxAge=3600)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Scala Steward badge](https://img.shields.io/badge/Scala_Steward-helping-blue.svg?style=flat&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAQCAMAAAARSr4IAAAAVFBMVEUAAACHjojlOy5NWlrKzcYRKjGFjIbp293YycuLa3pYY2LSqql4f3pCUFTgSjNodYRmcXUsPD/NTTbjRS+2jomhgnzNc223cGvZS0HaSD0XLjbaSjElhIr+AAAAAXRSTlMAQObYZgAAAHlJREFUCNdNyosOwyAIhWHAQS1Vt7a77/3fcxxdmv0xwmckutAR1nkm4ggbyEcg/wWmlGLDAA3oL50xi6fk5ffZ3E2E3QfZDCcCN2YtbEWZt+Drc6u6rlqv7Uk0LdKqqr5rk2UCRXOk0vmQKGfc94nOJyQjouF9H/wCc9gECEYfONoAAAAASUVORK5CYII=)](https://scala-steward.org)
 
 Prometheus metric exporter that executes a bash script on every scrape and returns the metrics from stdout.
 `$@` in the executed script will always contain the request path segments.
