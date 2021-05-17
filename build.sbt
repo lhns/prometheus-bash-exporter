@@ -1,7 +1,7 @@
 name := "prometheus-bash-exporter"
 version := "0.0.1-SNAPSHOT"
 
-scalaVersion := "2.13.5"
+scalaVersion := "2.13.6"
 
 val http4sVersion = "0.21.22"
 
