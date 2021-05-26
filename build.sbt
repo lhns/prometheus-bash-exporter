@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-dsl" % http4sVersion,
   "org.http4s" %% "http4s-blaze-server" % http4sVersion,
   "de.lolhens" %% "http4s-monix" % "0.0.1",
-  "io.github.vigoo" %% "prox-fs2" % "0.6.0",
+  "io.github.vigoo" %% "prox-fs2" % "0.7.0",
 )
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
