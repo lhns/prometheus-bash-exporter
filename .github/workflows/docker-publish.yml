@@ -43,7 +43,7 @@ jobs:
     needs: test
 
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && secrets.CR_PAT
 
     steps:
       - uses: actions/checkout@v2
