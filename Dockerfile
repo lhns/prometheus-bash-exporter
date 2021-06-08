@@ -3,7 +3,7 @@ MAINTAINER LolHens <pierrekisters@gmail.com>
 COPY . .
 ARG CI_VERSION=
 RUN sbt graalvm-native-image:packageBin
-RUN cp target/graalvm-native-image/prometheus-bash-exporter* prometheus-bash-exporter
+RUN cp "$(find target/graalvm-native-image -type f ! -name '*.txt')" prometheus-bash-exporter
 
 FROM debian:10
 
