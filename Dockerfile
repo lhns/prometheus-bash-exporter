@@ -1,4 +1,4 @@
-FROM lolhens/sbt-graal:21.0.0-java11 as builder
+FROM lolhens/sbt-graal:21.1.0-java11 as builder
 MAINTAINER LolHens <pierrekisters@gmail.com>
 COPY . .
 ARG CI_VERSION=
