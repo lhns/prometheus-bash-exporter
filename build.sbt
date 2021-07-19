@@ -7,7 +7,7 @@ version := {
 
 scalaVersion := "2.13.6"
 
-val http4sVersion = "0.21.24"
+val http4sVersion = "0.21.25"
 
 libraryDependencies ++= Seq(
   "org.graalvm.nativeimage" % "svm" % "21.1.0" % Provided,
