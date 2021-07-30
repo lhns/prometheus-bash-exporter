@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "io.monix" %% "monix" % "3.4.0",
   "org.http4s" %% "http4s-dsl" % http4sVersion,
   "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-  "de.lolhens" %% "http4s-monix" % "0.0.1",
+  "de.lolhens" %% "http4s-monix" % "0.0.2",
   "io.github.vigoo" %% "prox-fs2" % "0.7.1",
 )
 
