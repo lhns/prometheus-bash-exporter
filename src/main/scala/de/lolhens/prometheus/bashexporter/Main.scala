@@ -11,7 +11,7 @@ import monix.execution.atomic.Atomic
 import org.http4s._
 import org.http4s.dsl.task._
 import org.http4s.implicits._
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.middleware.AutoSlash
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
