@@ -5,7 +5,7 @@ ARG CI_VERSION=
 RUN sbt graalvm-native-image:packageBin
 RUN cp "$(find target/graalvm-native-image -type f ! -name '*.txt')" prometheus-bash-exporter
 
-FROM debian:10
+FROM debian:11
 
 ENV CLEANIMAGE_VERSION 2.0
 ENV CLEANIMAGE_URL https://raw.githubusercontent.com/LolHens/docker-cleanimage/$CLEANIMAGE_VERSION/cleanimage
