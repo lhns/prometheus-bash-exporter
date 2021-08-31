@@ -7,16 +7,15 @@ version := {
 
 scalaVersion := "2.13.6"
 
-val http4sVersion = "0.21.26"
+val http4sVersion = "0.23.1"
 
 libraryDependencies ++= Seq(
-  "org.graalvm.nativeimage" % "svm" % "21.2.0" % Provided,
   "ch.qos.logback" % "logback-classic" % "1.2.5",
-  "io.monix" %% "monix" % "3.4.0",
+  "io.github.vigoo" %% "prox-fs2-3" % "0.7.1",
+  "org.graalvm.nativeimage" % "svm" % "21.2.0" % Provided,
   "org.http4s" %% "http4s-dsl" % http4sVersion,
   "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-  "de.lolhens" %% "http4s-monix" % "0.0.1",
-  "io.github.vigoo" %% "prox-fs2" % "0.7.1",
+  "org.typelevel" %% "cats-effect" % "3.2.5",
 )
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
@@ -29,15 +28,9 @@ assembly / assemblyOption := (assembly / assemblyOption).value
   .copy(prependShellScript = Some(AssemblyPlugin.defaultUniversalScript(shebang = false)))
 
 assembly / assemblyMergeStrategy := {
-  case PathList(paths@_*) if paths.last == "module-info.class" =>
-    MergeStrategy.discard
-
-  case PathList("META-INF", "jpms.args") =>
-    MergeStrategy.discard
-
-  case PathList("META-INF", "io.netty.versions.properties") =>
-    MergeStrategy.first
-
+  case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
+  case PathList("META-INF", "jpms.args") => MergeStrategy.discard
+  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
   case x =>
     val oldStrategy = (assembly / assemblyMergeStrategy).value
     oldStrategy(x)

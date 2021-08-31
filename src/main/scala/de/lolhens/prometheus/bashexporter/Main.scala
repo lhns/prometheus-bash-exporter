@@ -1,34 +1,32 @@
 package de.lolhens.prometheus.bashexporter
 
 import cats.data.OptionT
-import cats.effect.{Blocker, ExitCode, Resource}
+import cats.effect._
+import cats.effect.kernel.Deferred
 import cats.syntax.either._
 import cats.syntax.semigroupk._
 import ch.qos.logback.classic.{Level, Logger}
 import io.github.vigoo.prox.ProxFS2
-import monix.eval.{Task, TaskApp}
-import monix.execution.atomic.Atomic
 import org.http4s._
-import org.http4s.dsl.task._
+import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.dsl.io._
 import org.http4s.implicits._
-import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware.AutoSlash
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
-import scala.concurrent.{Future, Promise}
 import scala.jdk.CollectionConverters._
 
-object Main extends TaskApp {
+object Main extends IOApp {
   private def setLogLevel(level: Level): Unit = {
     val rootLogger = org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger]
     rootLogger.setLevel(level)
   }
 
-  override def run(args: List[String]): Task[ExitCode] = Task.defer {
+  override def run(args: List[String]): IO[ExitCode] = IO.defer {
     val options = Options.fromEnv
     println(options.debug + "\n")
     setLogLevel(options.logLevel)
-    new Server(options).run
+    new Server(options).run.use(_ => IO.never)
   }
 
   case class Options(logLevel: Level,
@@ -89,49 +87,50 @@ object Main extends TaskApp {
 
     lazy val variableName: String = s"SCRIPT${route.map("_" + _.toUpperCase).mkString}"
 
-    def runWithoutCache(args: Seq[String]): Task[(ExitCode, String)] =
+    def runWithoutCache(args: Seq[String]): IO[(ExitCode, String)] = {
+      val prox: ProxFS2[IO] = ProxFS2[IO]
+      import prox._
+      implicit val runner: ProcessRunner[JVMProcessInfo] = new JVMProcessRunner()
+      val proc = Process("bash", List("-c", script, "bash") ++ args)
+
       for {
-        result <- blocker.use { blocker =>
-          val prox: ProxFS2[Task] = ProxFS2[Task](blocker)
-          import prox._
-          implicit val runner: ProcessRunner[JVMProcessInfo] = new JVMProcessRunner()
-          val proc = Process("bash", List("-c", script, "bash") ++ args)
-          proc.toVector(fs2.text.utf8Decode).run()
-        }
+        result <- proc.toVector(fs2.text.utf8.decode).run()
       } yield
         (result.exitCode, result.output.mkString)
+    }
 
-    private val atomicCache = Atomic(Map.empty[Seq[String], Future[(ExitCode, String)]])
+    private val atomicCache = Ref.unsafe[IO, Map[Seq[String], IO[(ExitCode, String)]]](Map.empty)
 
-    def run(args: Seq[String]): Task[(ExitCode, String)] = {
+    def run(args: Seq[String]): IO[(ExitCode, String)] = {
       cacheTtl match {
         case None =>
           runWithoutCache(args)
 
         case Some(ttl) =>
-          Task.deferFutureAction { implicit scheduler =>
-            val futureOrPromise: Either[Promise[(ExitCode, String)], Future[(ExitCode, String)]] =
-              atomicCache.transformAndExtract { cache =>
-                cache.get(args) match {
-                  case Some(future) => (Either.right(future), cache)
-                  case None =>
-                    val promise = Promise[(ExitCode, String)]
-                    (Either.left(promise), cache + (args -> promise.future))
-                }
-              }
+          for {
+            deferredOrIO <- atomicCache.modify { cache =>
+              cache.get(args) match {
+                case Some(io) =>
+                  (cache, Either.right(io))
 
-            futureOrPromise.fold(
-              { promise =>
-                val resultFuture = runWithoutCache(args).runToFuture
-                promise.completeWith(resultFuture)
-                (Task.sleep(ttl) *> Task {
-                  atomicCache.transform(_ - args)
-                }).runAsyncAndForget
-                resultFuture
+                case None =>
+                  val deferred = Deferred.unsafe[IO, (ExitCode, String)]
+                  (cache + (args -> deferred.get), Either.left(deferred))
+              }
+            }
+
+            result <- deferredOrIO.fold(
+              { deferred =>
+                for {
+                  result <- runWithoutCache(args).flatTap(deferred.complete)
+                  _ <- (IO.sleep(ttl) >> atomicCache.update(_ - args)).start
+                } yield
+                  result
               },
-              future => future
+              io => io
             )
-          }
+          } yield
+            result
       }
     }
   }
@@ -165,26 +164,25 @@ object Main extends TaskApp {
 
   }
 
-  private val blocker: Resource[Task, Blocker] = Blocker[Task]
-
   class Server(options: Options) {
-    lazy val run: Task[Nothing] = Task.deferAction { scheduler =>
-      BlazeServerBuilder[Task](scheduler)
-        .bindHttp(options.port, options.host)
-        .withHttpApp(service.orNotFound)
-        .resource
-        .use(_ => Task.never)
-    }
+    lazy val run: Resource[IO, Unit] =
+      for {
+        ec <- Resource.eval(IO.executionContext)
+        _ <- BlazeServerBuilder[IO](ec)
+          .bindHttp(options.port, options.host)
+          .withHttpApp(service.orNotFound)
+          .resource
+      } yield ()
 
-    lazy val service: HttpRoutes[Task] = AutoSlash {
-      HttpRoutes.of[Task] {
+    lazy val service: HttpRoutes[IO] = AutoSlash {
+      HttpRoutes.of[IO] {
         case GET -> Root / "health" =>
           Ok()
       } <+> HttpRoutes {
         case GET -> path =>
-          val pathList = path.toList.map(_.toLowerCase)
+          val pathList = path.segments.map(_.encoded.toLowerCase)
           for {
-            (script, subPath) <- OptionT.fromOption[Task] {
+            (script, subPath) <- OptionT.fromOption[IO] {
               options.scripts.collectFirst {
                 case script if pathList.startsWith(script.route) =>
                   (script, pathList.drop(script.route.length))
