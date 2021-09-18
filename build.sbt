@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "org.graalvm.nativeimage" % "svm" % "21.2.0" % Provided,
   "org.http4s" %% "http4s-dsl" % http4sVersion,
   "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-  "org.typelevel" %% "cats-effect" % "3.2.8",
+  "org.typelevel" %% "cats-effect" % "3.2.9",
 )
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
