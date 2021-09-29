@@ -3,8 +3,7 @@ package de.lolhens.prometheus.bashexporter
 import cats.data.OptionT
 import cats.effect._
 import cats.effect.kernel.Deferred
-import cats.syntax.either._
-import cats.syntax.semigroupk._
+import cats.syntax.functor._
 import ch.qos.logback.classic.{Level, Logger}
 import io.github.vigoo.prox.ProxFS2
 import org.http4s._
@@ -15,6 +14,7 @@ import org.http4s.server.middleware.AutoSlash
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.jdk.CollectionConverters._
+import scala.util.chaining._
 
 object Main extends IOApp {
   private def setLogLevel(level: Level): Unit = {
@@ -24,9 +24,9 @@ object Main extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = IO.defer {
     val options = Options.fromEnv
-    println(options.debug + "\n")
+    println(options.summary + "\n")
     setLogLevel(options.logLevel)
-    new Server(options).run.use(_ => IO.never)
+    new Server(options).resource.use(_ => IO.never)
   }
 
   case class Options(logLevel: Level,
@@ -34,7 +34,7 @@ object Main extends IOApp {
                      port: Int,
                      scripts: Seq[Script],
                     ) {
-    def debug: String = {
+    def summary: String = {
       s"""LOG_LEVEL: $logLevel
          |SERVER_HOST: $host
          |SERVER_PORT: $port
@@ -43,7 +43,7 @@ object Main extends IOApp {
           (script, script.scriptLines.map("\n  " + _).mkString)
         }.sortBy(_._1.variableName).map {
           case (script, scriptLines) =>
-            s"${script.variableName}${script.cacheTtl.map(ttl => s" (cache for $ttl)").getOrElse("")}:${scriptLines}"
+            s"${script.variableName}${script.cacheTtl.map(ttl => s" (cache for $ttl)").getOrElse("")}:$scriptLines"
         }.mkString("\n")
       }""".stripMargin
     }
@@ -91,8 +91,8 @@ object Main extends IOApp {
       val prox: ProxFS2[IO] = ProxFS2[IO]
       import prox._
       implicit val runner: ProcessRunner[JVMProcessInfo] = new JVMProcessRunner()
-      val proc = Process("bash", List("-c", script, "bash") ++ args)
 
+      val proc = Process("bash", List("-c", script, "bash") ++ args)
       for {
         result <- proc.toVector(fs2.text.utf8.decode).run()
       } yield
@@ -107,30 +107,20 @@ object Main extends IOApp {
           runWithoutCache(args)
 
         case Some(ttl) =>
-          for {
-            deferredOrIO <- atomicCache.modify { cache =>
-              cache.get(args) match {
-                case Some(io) =>
-                  (cache, Either.right(io))
+          atomicCache.modify { cache =>
+            cache.get(args) match {
+              case Some(io) =>
+                (cache, io)
 
-                case None =>
-                  val deferred = Deferred.unsafe[IO, (ExitCode, String)]
-                  (cache + (args -> deferred.get), Either.left(deferred))
-              }
+              case None =>
+                val deferred = Deferred.unsafe[IO, (ExitCode, String)]
+                val io =
+                  atomicCache.update(_ - args).delayBy(ttl).start >>
+                    runWithoutCache(args).flatTap(deferred.complete)
+
+                (cache + (args -> deferred.get), io)
             }
-
-            result <- deferredOrIO.fold(
-              { deferred =>
-                for {
-                  result <- runWithoutCache(args).flatTap(deferred.complete)
-                  _ <- (IO.sleep(ttl) >> atomicCache.update(_ - args)).start
-                } yield
-                  result
-              },
-              io => io
-            )
-          } yield
-            result
+          }.flatten
       }
     }
   }
@@ -165,20 +155,18 @@ object Main extends IOApp {
   }
 
   class Server(options: Options) {
-    lazy val run: Resource[IO, Unit] =
-      for {
-        ec <- Resource.eval(IO.executionContext)
-        _ <- BlazeServerBuilder[IO](ec)
-          .bindHttp(options.port, options.host)
-          .withHttpApp(service.orNotFound)
-          .resource
-      } yield ()
+    lazy val resource: Resource[IO, Unit] =
+      BlazeServerBuilder[IO]
+        .bindHttp(options.port, options.host)
+        .withHttpApp(service.orNotFound)
+        .resource
+        .void
 
-    lazy val service: HttpRoutes[IO] = AutoSlash {
-      HttpRoutes.of[IO] {
+    lazy val service: HttpRoutes[IO] =
+      HttpRoutes[IO] {
         case GET -> Root / "health" =>
-          Ok()
-      } <+> HttpRoutes {
+          OptionT.liftF(Ok())
+
         case GET -> path =>
           val pathList = path.segments.map(_.encoded.toLowerCase)
           for {
@@ -190,15 +178,14 @@ object Main extends IOApp {
             }
             (exitCode, output) <- OptionT.liftF(script.run(subPath))
             response <- OptionT.liftF {
-              if (exitCode == ExitCode.Success)
-                Ok(output)
-              else
-                InternalServerError(output)
+              exitCode match {
+                case ExitCode.Success => Ok(output)
+                case _ => InternalServerError(output)
+              }
             }
           } yield
             response
-      }
-    }
+      }.pipe(AutoSlash(_))
   }
 
 }

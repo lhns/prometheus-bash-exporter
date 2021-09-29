@@ -1,7 +1,9 @@
 FROM lolhens/sbt-graal:21.2.0-java11 as builder
-MAINTAINER LolHens <pierrekisters@gmail.com>
+
 COPY . .
-ARG CI_VERSION=
+
+ARG CI_VERSION
+
 RUN sbt graalvm-native-image:packageBin
 RUN cp "$(find target/graalvm-native-image -type f ! -name '*.txt')" prometheus-bash-exporter
 
@@ -13,13 +15,13 @@ ENV CLEANIMAGE_URL https://raw.githubusercontent.com/LolHens/docker-cleanimage/$
 ADD ["$CLEANIMAGE_URL", "/usr/local/bin/"]
 RUN chmod +x "/usr/local/bin/cleanimage"
 
-ENV JQ_VERSION 1.6
-ENV JQ_URL https://github.com/stedolan/jq/releases/download/jq-$JQ_VERSION/jq-linux64
+ENV JQ_REF a17dd32
+ENV JQ_URL https://github.com/LolHens/jq-buildenv/releases/download/$JQ_REF/jq
 
 RUN apt-get update \
  && apt-get install -y \
       curl \
- && curl -LSsf -- "$JQ_URL" > /usr/bin/jq \
+ && curl -LsSf -- "$JQ_URL" > /usr/bin/jq \
  && chmod +x /usr/bin/jq \
  && cleanimage
 

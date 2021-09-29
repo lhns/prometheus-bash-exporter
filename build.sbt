@@ -30,7 +30,6 @@ assembly / assemblyOption := (assembly / assemblyOption).value
 assembly / assemblyMergeStrategy := {
   case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
   case PathList("META-INF", "jpms.args") => MergeStrategy.discard
-  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
   case x =>
     val oldStrategy = (assembly / assemblyMergeStrategy).value
     oldStrategy(x)
