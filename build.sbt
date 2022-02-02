@@ -12,7 +12,7 @@ val http4sVersion = "0.23.9"
 libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.10",
   "io.github.vigoo" %% "prox-fs2-3" % "0.7.4",
-  "org.graalvm.nativeimage" % "svm" % "21.3.1" % Provided,
+  "org.graalvm.nativeimage" % "svm" % "22.0.0.2" % Provided,
   "org.http4s" %% "http4s-dsl" % http4sVersion,
   "org.http4s" %% "http4s-blaze-server" % http4sVersion,
   "org.typelevel" %% "cats-effect" % "3.3.5",
