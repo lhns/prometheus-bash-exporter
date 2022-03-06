@@ -10,7 +10,7 @@ scalaVersion := "2.13.8"
 val http4sVersion = "0.23.10"
 
 libraryDependencies ++= Seq(
-  "ch.qos.logback" % "logback-classic" % "1.2.10",
+  "ch.qos.logback" % "logback-classic" % "1.2.11",
   "io.github.vigoo" %% "prox-fs2-3" % "0.7.5",
   "org.graalvm.nativeimage" % "svm" % "22.0.0.2" % Provided,
   "org.http4s" %% "http4s-dsl" % http4sVersion,
