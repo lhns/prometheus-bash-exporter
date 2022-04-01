@@ -20,7 +20,7 @@ Prometheus metric exporter that executes a bash script on every scrape and retur
 Head over to the [wiki](https://github.com/LolHens/prometheus-bash-exporter/wiki) to see our collection of scripts.
 
 ## Docker builds
-https://github.com/users/LolHens/packages/container/package/prometheus-bash-exporter
+https://github.com/users/lhns/packages/container/package/prometheus-bash-exporter
 
 ## License
 This project uses the Apache 2.0 License. See the file called LICENSE.
