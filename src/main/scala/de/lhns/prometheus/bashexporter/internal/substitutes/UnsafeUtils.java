@@ -1,4 +1,4 @@
-package de.lolhens.prometheus.bashexporter.internal.substitutes;
+package de.lhns.prometheus.bashexporter.internal.substitutes;
 
 import java.lang.reflect.Field;
 

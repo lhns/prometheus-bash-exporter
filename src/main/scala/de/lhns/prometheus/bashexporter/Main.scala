@@ -1,4 +1,4 @@
-package de.lolhens.prometheus.bashexporter
+package de.lhns.prometheus.bashexporter
 
 import cats.effect._
 import ch.qos.logback.classic.{Level, Logger}

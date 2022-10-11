@@ -1,4 +1,4 @@
-package de.lolhens.prometheus.bashexporter
+package de.lhns.prometheus.bashexporter
 
 import ch.qos.logback.classic.Level
 import com.comcast.ip4s._
