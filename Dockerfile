@@ -1,12 +1,3 @@
-FROM lolhens/sbt-graal:22.2.0-java11 as builder
-
-COPY . .
-
-ARG CI_VERSION
-
-RUN sbt graalvm-native-image:packageBin
-RUN cp "$(find target/graalvm-native-image -type f ! -name '*.txt')" prometheus-bash-exporter
-
 FROM debian:11
 
 ENV CLEANIMAGE_VERSION 2.0
@@ -25,7 +16,7 @@ RUN apt-get update \
  && chmod +x /usr/bin/jq \
  && cleanimage
 
-COPY --from=builder /root/prometheus-bash-exporter .
+COPY prometheus-bash-exporter ./
 
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s \
   CMD curl -Ssf -- http://localhost:${SERVER_PORT:-8080}/health || exit 1

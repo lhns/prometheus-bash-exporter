@@ -1,51 +1,62 @@
-name := "prometheus-bash-exporter"
-version := {
-  val Tag = "refs/tags/(.*)".r
-  sys.env.get("CI_VERSION").collect { case Tag(tag) => tag }
-    .getOrElse("0.0.1-SNAPSHOT")
+ThisBuild / scalaVersion := "2.13.9"
+
+val V = new {
+  val catsEffect = "3.3.14"
+  val http4s = "0.23.16"
+  val logbackClassic = "1.4.4"
+  val munit = "0.7.29"
+  val munitTaglessFinal = "0.2.0"
+  val nativeimage = "22.2.0"
+  val prox = "0.7.8"
 }
 
-scalaVersion := "2.13.9"
-
-val http4sVersion = "0.23.12"
-
-libraryDependencies ++= Seq(
-  "ch.qos.logback" % "logback-classic" % "1.4.4",
-  "io.github.vigoo" %% "prox-fs2-3" % "0.7.8",
-  "org.graalvm.nativeimage" % "svm" % "22.2.0" % Provided,
-  "org.http4s" %% "http4s-dsl" % http4sVersion,
-  "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-  "org.typelevel" %% "cats-effect" % "3.3.14",
+lazy val commonSettings: Seq[Setting[_]] = Seq(
+  version := {
+    val Tag = "refs/tags/v?([0-9]+(?:\\.[0-9]+)+(?:[+-].*)?)".r
+    sys.env.get("CI_VERSION").collect { case Tag(tag) => tag }
+      .getOrElse("0.0.1-SNAPSHOT")
+  },
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+  libraryDependencies ++= Seq(
+    "ch.qos.logback" % "logback-classic" % V.logbackClassic % Test,
+    "de.lolhens" %% "munit-tagless-final" % V.munitTaglessFinal % Test,
+    "org.scalameta" %% "munit" % V.munit % Test
+  ),
+  testFrameworks += new TestFramework("munit.Framework"),
+  assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat",
+  assembly / assemblyOption := (assembly / assemblyOption).value
+    .withPrependShellScript(Some(AssemblyPlugin.defaultUniversalScript(shebang = false))),
+  assembly / assemblyMergeStrategy := {
+    case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
+    case x =>
+      val oldStrategy = (assembly / assemblyMergeStrategy).value
+      oldStrategy(x)
+  }
 )
 
-addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+lazy val root = (project in file("."))
+  .enablePlugins(GraalVMNativeImagePlugin)
+  .settings(commonSettings)
+  .settings(
+    name := "prometheus-bash-exporter",
 
-Compile / doc / sources := Seq.empty
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % V.logbackClassic,
+      "io.github.vigoo" %% "prox-fs2-3" % V.prox,
+      "org.graalvm.nativeimage" % "svm" % V.nativeimage % Provided,
+      "org.http4s" %% "http4s-dsl" % V.http4s,
+      "org.http4s" %% "http4s-ember-server" % V.http4s,
+      "org.typelevel" %% "cats-effect" % V.catsEffect,
+    ),
 
-assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat"
-
-assembly / assemblyOption := (assembly / assemblyOption).value
-  .withPrependShellScript(Some(AssemblyPlugin.defaultUniversalScript(shebang = false)))
-
-assembly / assemblyMergeStrategy := {
-  case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
-  case PathList("META-INF", "jpms.args") => MergeStrategy.discard
-  case x =>
-    val oldStrategy = (assembly / assemblyMergeStrategy).value
-    oldStrategy(x)
-}
-
-enablePlugins(
-  GraalVMNativeImagePlugin
-)
-
-GraalVMNativeImage / name := (GraalVMNativeImage / name).value + "-" + (GraalVMNativeImage / version).value
-graalVMNativeImageOptions ++= Seq(
-  //"--static",
-  "--no-server",
-  "--no-fallback",
-  "--initialize-at-build-time",
-  "--install-exit-handlers",
-  "--enable-url-protocols=http,https",
-  "--allow-incomplete-classpath" /*logback-classic*/
-)
+    GraalVMNativeImage / name := (GraalVMNativeImage / name).value + "-" + (GraalVMNativeImage / version).value,
+    graalVMNativeImageOptions ++= Seq(
+      //"--static",
+      "--no-server",
+      "--no-fallback",
+      "--initialize-at-build-time",
+      "--install-exit-handlers",
+      "--enable-url-protocols=http,https",
+      "--allow-incomplete-classpath" /*logback-classic*/
+    )
+  )
