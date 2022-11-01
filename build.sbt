@@ -6,7 +6,7 @@ val V = new {
   val logbackClassic = "1.4.4"
   val munit = "0.7.29"
   val munitTaglessFinal = "0.2.0"
-  val nativeimage = "22.2.0.1"
+  val nativeimage = "22.3.0"
   val prox = "0.7.8"
 }
 
