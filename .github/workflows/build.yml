@@ -28,16 +28,18 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: '22.2.0'
+          version: '22.3.0'
           java-version: '17'
           components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: SBT Build
         env:
           CI_VERSION: ${{ github.ref }}
         run: |
           sbt "; test; graalvm-native-image:packageBin"
-          cp "$(find target/graalvm-native-image -type f ! -name '*.txt')" prometheus-bash-exporter
+          shopt -s extglob
+          mv target/graalvm-native-image/!(*.txt) prometheus-bash-exporter
 
       - name: Docker Build
         run: docker build -t "$IMAGE_NAME" --label "runnumber=${GITHUB_RUN_ID}" .
