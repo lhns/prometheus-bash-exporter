@@ -7,7 +7,7 @@ val V = new {
   val munit = "0.7.29"
   val munitTaglessFinal = "0.2.0"
   val nativeimage = "23.1.1"
-  val prox = "0.7.9"
+  val prox = "0.8.0"
 }
 
 lazy val commonSettings: Seq[Setting[_]] = Seq(
