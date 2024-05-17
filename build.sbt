@@ -1,7 +1,7 @@
 ThisBuild / scalaVersion := "2.13.14"
 
 val V = new {
-  val catsEffect = "3.5.3"
+  val catsEffect = "3.5.4"
   val http4s = "0.23.27"
   val logbackClassic = "1.4.13"
   val munit = "0.7.29"
